@@ -1,68 +1,60 @@
-import { Stack } from 'expo-router';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Layout() {
     return (
-        <Stack>
-            <Stack.Screen
+        <Tabs
+            screenOptions={{
+                tabBarActiveTintColor: '#42acfa',
+                tabBarInactiveTintColor: '#381a60',
+                tabBarStyle: {
+                    padding: 5,
+                    backgroundColor: '#b8b3b3',
+                },
+                tabBarLabelStyle: {
+                    fontSize: 15,
+                    fontWeight: 'bold',
+                    fontFamily: 'Roboto',
+                }
+            }}
+        >
+            <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'CREATING A QUESTIONNAIRE',
-                    headerStyle: {
-                        backgroundColor: '#7381f8',
-                    },
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                        fontSize: 20,
-                    },
-                    headerTitleAlign: 'center',
-                    headerTintColor: '#ffffff',
+                    title: "School Subjects",
+                    headerShown: false,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="book-outline" color={color} size={size} />
+                    ),
                 }}
             />
-            <Stack.Screen
-                name="personalData"
+            <Tabs.Screen
+                name="homework"
                 options={{
-                    title: 'PERSONAL DATA',
-                    headerStyle: {
-                        backgroundColor: '#7381f8',
-                    },
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                        fontSize: 20,
-                    },
-                    headerTitleAlign: 'center',
-                    headerTintColor: '#ffffff',
+                    title: "Home Work",
+                    headerShown: false,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="pencil-outline" color={color} size={size} />
+                    ),
                 }}
             />
-            <Stack.Screen
-                name="additionallyData"
+            <Tabs.Screen
+                name="profile"
                 options={{
-                    title: 'ADDITIONALLY DATA',
-                    headerStyle: {
-                        backgroundColor: '#7381f8',
-                    },
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                        fontSize: 20,
-                    },
-                    headerTitleAlign: 'center',
-                    headerTintColor: '#ffffff',
+                    title: "Profile",
+                    headerShown: false,
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="person-outline" color={color} size={size} />
+                    ),
                 }}
             />
-            <Stack.Screen
-                name="allInformation"
+            <Tabs.Screen
+                name="subjects/[id]"
                 options={{
-                    title: 'CHECKING DATA',
-                    headerStyle: {
-                        backgroundColor: '#7381f8',
-                    },
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                        fontSize: 20,
-                    },
-                    headerTitleAlign: 'center',
-                    headerTintColor: '#ffffff',
+                    href: null,
+                    headerShown: false,
                 }}
             />
-        </Stack>
+        </Tabs>
     );
 }
