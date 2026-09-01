@@ -1,101 +1,173 @@
-import {View, Text, StyleSheet, TouchableOpacity, TextInput, Button, Alert} from "react-native";
-import React, {useEffect, useState} from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {Label} from "expo-router/build/native-tabs";
+import React, { useEffect, useState } from "react";
+import {
+    View,
+    Text,
+    StyleSheet,
+    TextInput,
+    Switch,
+    Button,
+    FlatList,
+    TouchableOpacity, Alert, ActivityIndicator,
+    Image
+} from "react-native";
+import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 
-export default function GuessGame() {
-    const [level, setLevel] = useState(0);
-    const [score, setScore] = useState(0);
-    const [input, setInput] = useState("");
-    const [attempt, setAttempt] = useState(0);
-    const [targetNumber, setTargetNumber] = useState(generateNumber());
-    const [label, setLabel] = useState("");
+const URL = `https://6a9705c90e3240db9061a272.mockapi.io/api/myProject`
 
-    function generateNumber() {
-        return Math.floor(Math.random() * 10) + 1;
-    }
+const HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+}
 
-    useEffect(() => {
-        loadProgress();
-    }, [])
+export default function Game() {
+    const [games, setGames] = useState([]);
+    const [title, setTitle] = useState("");
+    const [year, setYear] = useState("");
+    const [price, setPrice] = useState("");
+    const [genre, setGenre] = useState("");
+    const [cover, setCover] = useState("");
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        saveProgress(level, score, attempt);
-    }, [level, score, attempt]);
-
-    const handleGuess = () => {
-        const userGuess = parseInt(input, 10);
-
-        if (isNaN(userGuess) || userGuess < 1 || userGuess > 10) {
-            Alert.alert("Invalid Input", "Please enter a number between 1 and 10.");
-            return;
-        }
-
-        if (userGuess === targetNumber) {
-            setLabel("Correct!");
-            setScore((prev) => prev + 10);
-            setLevel((prev) => prev + 1);
-            setTargetNumber(generateNumber());
-        }
-        else if (userGuess > targetNumber) {
-            setLabel("The correct number less. Try again!");
-        }
-        else if (userGuess < targetNumber) {
-            setLabel("The correct number larger. Try again!")
-        }
-
-        setInput("");
-        setAttempt((prev) => prev + 1);
-    };
-
-    const saveProgress = async (currentLevel, currentScore, currentAttempt) => {
-        try {
-            const data = {level: currentLevel, score: currentScore, attempt: currentAttempt};
-            await AsyncStorage.setItem("guess", JSON.stringify(data));
-        }
-        catch (error) {
-            console.log(error);
-        }
-    }
-
-    const loadProgress = async () => {
+    const fetchGames = async () => {
         try{
-            const data = await AsyncStorage.getItem("guess");
-            if(data) {
-                const parsedData = JSON.parse(data);
-                if (parsedData.level) setLevel(parsedData.level);
-                if (parsedData.score) setScore(parsedData.score);
-                if(parsedData.attempt) setAttempt(parsedData.attempt)
+            const response = await fetch(`${URL}/games`, {headers: HEADERS});
+            const json = await response.json();
+            setGames(json);
+            setLoading(false);
+        }
+        catch(error){
+            console.log(error);
+            setLoading(false);
+        }
+    }
+
+    const addGames = async () => {
+        if(title  === '' || year  === '' || price  === '' || genre === '') return;
+
+        try{
+            const response = await fetch(`${URL}/games`, {
+                method: 'POST',
+                headers: HEADERS,
+                body: JSON.stringify({
+                    title: title,
+                    year: year,
+                    price: parseFloat(price),
+                    genre: genre,
+                    cover: cover,
+                })
+            })
+
+            if(response.ok){
+                setTitle('')
+                setGenre('')
+                setPrice('')
+                setYear('')
+
+                await fetchGames();
+                setLoading(false);
             }
         }
-        catch (error) {
+        catch(error){
             console.log(error);
+            setLoading(false);
         }
     }
 
-    const averageAttempts = level > 0 ? (attempt / level).toFixed(1) : 0;
+    const deleteGames = async (id) => {
+        try {
+            const response = await fetch(`${URL}/games/${id}`, {
+                method: 'DELETE',
+                headers: HEADERS,
+            })
+
+            if(response.ok){
+                await fetchGames();
+                setLoading(false);
+            }
+        }
+        catch(error){
+            console.log(error);
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchGames();
+    }, [])
+
+    const renderGameItem = ({ item }) => (
+        <View style={styles.item}>
+            {item.cover ? (
+                <Image source={{ uri: item.cover }} style={styles.coverImage} />
+            ) : null}
+            <View style={styles.itemInfo}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemSubText}>Genre: {item.genre}</Text>
+                <Text style={styles.itemSubText}>Year: {item.year} | Price: ${item.price}</Text>
+            </View>
+            <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => deleteGames(item.id)}
+            >
+                <Text style={styles.deleteButtonText}>DELETE</Text>
+            </TouchableOpacity>
+        </View>
+    );
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>GUESS THE NUMBER</Text>
-            <Text style={styles.text}>Level: {level}</Text>
-            <Text style={styles.text}>Guess the number between 1 and 10</Text>
-            <Text style={styles.text}>{label}</Text>
+        <SafeAreaView style={styles.container}>
+            <SafeAreaProvider>
+                <View style={styles.header}>
+                    <Text style={styles.title}>GAMES CATALOG</Text>
+                </View>
 
-            <TextInput
-                style={styles.input}
-                value={input}
-                onChangeText={setInput}
-                keyboardType="numeric"
-            />
+                <View style={styles.inputContainer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Title..."
+                        value={title}
+                        onChangeText={setTitle}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Genre..."
+                        value={genre}
+                        onChangeText={setGenre}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Year..."
+                        keyboardType="numeric"
+                        value={year}
+                        onChangeText={setYear}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Price"
+                        keyboardType="numeric"
+                        value={price}
+                        onChangeText={setPrice}
+                    />
+                    <TouchableOpacity style={styles.addButton} onPress={addGames}>
+                        <Text style={styles.addButtonText}>ADD GAME</Text>
+                    </TouchableOpacity>
+                </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleGuess}>
-                <Text style={styles.buttonText}>GUESS</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.text}>Score: {score}</Text>
-            <Text style={styles.text}>Average Attempts: {averageAttempts}</Text>
-        </View>
+                <View style={styles.content}>
+                    {loading ? (
+                        <ActivityIndicator size="large" />
+                    ) : (
+                        <FlatList
+                            data={games}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={renderGameItem}
+                            style={styles.list}
+                        />
+                    )}
+                </View>
+            </SafeAreaProvider>
+        </SafeAreaView>
     );
 }
 
@@ -103,41 +175,117 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#f5f5f7",
+    },
+    header: {
+        width: "100%",
+        height: 60,
+        backgroundColor: "#403e3e",
         justifyContent: "center",
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: "600",
+        color: "#ffffff",
+    },
+    content: {
+        flex: 1,
+        alignItems: "center",
+    },
+    inputContainer: {
+        width: "100%",
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
         padding: 20,
-        gap: 15,
+        gap: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        marginBottom: 20,
+        marginTop: 10,
     },
     input: {
         width: "100%",
-        maxWidth: 300,
-        height: 50,
-        borderColor: "#ccc",
+        height: 48,
+        borderColor: "#e5e5ea",
         borderWidth: 1,
-        borderRadius: 8,
-        textAlign: "center",
-        fontSize: 18,
-        backgroundColor: "#fff",
+        borderRadius: 10,
+        paddingHorizontal: 15,
+        fontSize: 16,
+        backgroundColor: "#fafafa",
+        color: "#1c1c1e",
     },
-    button: {
+    addButton: {
         backgroundColor: "#a224ec",
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        width: "100%",
-        maxWidth: 300,
+        height: 48,
+        borderRadius: 10,
+        justifyContent: "center",
         alignItems: "center",
+        marginTop: 5,
     },
-    buttonText: {
+    addButtonText: {
         color: "#ffffff",
         fontSize: 16,
-        fontWeight: "bold",
-    },
-    title: {
-        fontSize: 20,
         fontWeight: "600",
     },
-    text: {
+    list: {
+        width: "100%",
+        maxWidth: 360,
+        paddingHorizontal: 10,
+    },
+    listContainer: {
+        gap: 10,
+        paddingBottom: 20,
+    },
+    item: {
+        backgroundColor: "#ffffff",
+        padding: 12,
+        borderRadius: 12,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
+        gap: 12,
+    },
+    coverImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        backgroundColor: "#e5e5ea",
+    },
+    itemInfo: {
+        flex: 1,
+        gap: 2,
+    },
+    itemTitle: {
         fontSize: 16,
+        fontWeight: "600",
+        color: "#1c1c1e",
+    },
+    itemSubText: {
+        fontSize: 13,
+        color: "#8e8e93",
+    },
+    deleteButton: {
+        backgroundColor: "#ff3b3015",
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    deleteButtonText: {
+        color: "#ff3b30",
+        fontWeight: "600",
+        fontSize: 13,
     },
 });
