@@ -20,6 +20,8 @@ const HEADERS = {
     'ngrok-skip-browser-warning': 'true'
 }
 
+const SORTS = ['YEAR', 'PRICE', 'TITLE'];
+
 export default function Game() {
     const [games, setGames] = useState([]);
     const [title, setTitle] = useState("");
@@ -28,6 +30,8 @@ export default function Game() {
     const [genre, setGenre] = useState("");
     const [cover, setCover] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectSort, setSelectSort] = useState("");
 
     const fetchGames = async () => {
         try{
@@ -54,7 +58,7 @@ export default function Game() {
                     year: year,
                     price: parseFloat(price),
                     genre: genre,
-                    cover: cover,
+                    cover: cover || `https://picsum.photos/id/${Math.floor(Math.random() * 100)}/200/200`,
                 })
             })
 
@@ -115,6 +119,26 @@ export default function Game() {
         </View>
     );
 
+    const sortByElement = (type) => {
+        setSelectSort(type);
+        setIsOpen(false);
+
+        const sortedGames = [...games].sort((a, b) => {
+            if (type === 'YEAR') {
+                return Number(a.year) - Number(b.year);
+            }
+            if (type === 'PRICE') {
+                return Number(a.price) - Number(b.price);
+            }
+            if (type === 'TITLE') {
+                return a.title.localeCompare(b.title);
+            }
+            return 0;
+        });
+
+        setGames(sortedGames);
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <SafeAreaProvider>
@@ -123,6 +147,31 @@ export default function Game() {
                 </View>
 
                 <View style={styles.inputContainer}>
+                    <View>
+                        <TouchableOpacity
+                            style={styles.selectButton}
+                            onPress={() => setIsOpen(!isOpen)}
+                        >
+                            <Text style={styles.selectText}>
+                                {selectSort || 'Sort by...'}
+                            </Text>
+                            <Text>{isOpen ? '▲' : '▼'}</Text>
+                        </TouchableOpacity>
+
+                        {isOpen && (
+                            <View style={styles.dropdown}>
+                                {SORTS.map((g) => (
+                                    <TouchableOpacity
+                                        key={g}
+                                        style={styles.option}
+                                        onPress={() => sortByElement(g)}
+                                    >
+                                        <Text>{g}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                    </View>
                     <TextInput
                         style={styles.input}
                         placeholder="Title..."
@@ -287,5 +336,33 @@ const styles = StyleSheet.create({
         color: "#ff3b30",
         fontWeight: "600",
         fontSize: 13,
+    },
+    text: {
+        fontSize: 16,
+        color: "#490471",
+        fontFamily: "Roboto",
+    },
+    selectButton: {
+        height: 48,
+        borderColor: "#e5e5ea",
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 15,
+        backgroundColor: "#fafafa",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    selectText: {
+        fontSize: 16,
+        color: "#1c1c1e",
+    },
+    dropdown: {
+        marginTop: 5,
+        borderWidth: 1,
+        borderColor: "#e5e5ea",
+        borderRadius: 10,
+        backgroundColor: "#ffffff",
+        overflow: "hidden",
     },
 });
