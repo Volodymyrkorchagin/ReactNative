@@ -126,6 +126,23 @@ export default function Layout() {
                     },
                 }}
             />
+
+            <Stack.Screen
+                name="categories/[category]"
+                options={{
+                    title: "Recipe",
+                    headerStyle: {
+                        backgroundColor: "#1B4332",
+                    },
+                    headerTintColor: "#FFFFFF",
+                    headerTitleStyle: {
+                        fontWeight: "700",
+                    },
+                    contentStyle: {
+                        backgroundColor: "#F8F5F0",
+                    },
+                }}
+            />
         </Stack>
     );
 }

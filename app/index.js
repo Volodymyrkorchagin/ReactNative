@@ -1,29 +1,30 @@
 import {
     View,
     Text,
-    StyleSheet,
+    StyleSheet, Button,
 } from 'react-native';
 import { Link } from "expo-router";
-import * as SQLite from "expo-sqlite"
-import {useState, useEffect} from "react";
+import * as SQLite from "expo-sqlite";
+import { useState, useEffect } from "react";
 import data from "./helper/data";
 
 export default function Home() {
-    const [count, setCount] = useState(0)
-    const [recipes, setRecipes] = useState([])
+    const [count, setCount] = useState(0);
+    const [recipes, setRecipes] = useState([]);
 
     const db = SQLite.openDatabaseSync("cousin.db");
 
     useEffect(() => {
         db.execAsync(`
-            CREATE TABLE IF NOT EXISTS recipes (
+        CREATE TABLE IF NOT EXISTS recipes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
+            category TEXT,
             ingredients TEXT NOT NULL,
             instructions TEXT,
             image TEXT NOT NULL
-            );
-        `)
+        );
+    `)
             .then(() => seedDatabase())
             .then(() => loadRecipes())
             .then((rows) => {
@@ -32,7 +33,7 @@ export default function Home() {
                 }
             })
             .catch((err) => {
-                console.error(err);
+                console.error("Database error:", err);
             });
     }, []);
 
@@ -47,13 +48,19 @@ export default function Home() {
                         : recipe.ingredients;
 
                     await db.runAsync(
-                        `INSERT INTO recipes (title, ingredients, instructions, image) VALUES (?, ?, ?, ?);`,
-                        [recipe.title, ingredientsString, recipe.instructions, recipe.image]
+                        `INSERT INTO recipes (title, category, ingredients, instructions, image) VALUES (?, ?, ?, ?, ?);`,
+                        [
+                            recipe.title,
+                            recipe.category || 'lunch',
+                            ingredientsString,
+                            recipe.instructions,
+                            recipe.image
+                        ]
                     );
                 }
             }
         } catch (error) {
-            console.error(error);
+            console.error("Seed error:", error);
         }
     };
 
@@ -65,7 +72,6 @@ export default function Home() {
 
     return (
         <View style={styles.container}>
-
             <Text style={styles.title}>
                 Recipe App
             </Text>
@@ -75,7 +81,6 @@ export default function Home() {
             </Text>
 
             <View style={styles.buttons}>
-
                 <Link href="/popularRecipes" style={styles.button}>
                     Popular Recipes 🥇
                 </Link>
@@ -95,7 +100,6 @@ export default function Home() {
                 <Link href="/myRecipe" style={styles.button}>
                     My Recipes ✒️
                 </Link>
-
             </View>
         </View>
     );

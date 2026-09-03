@@ -1,25 +1,50 @@
-import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    Image,
-    TouchableOpacity,
-} from 'react-native';
-import { Link, useRouter } from "expo-router";
-import data from "./helper/data";
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SQLite from 'expo-sqlite';
+import { useState, useEffect } from 'react';
 
-export default function Home() {
+export default function DynamicCategoryScreen() {
     const router = useRouter();
+    const { category } = useLocalSearchParams();
+    const [recipes, setRecipes] = useState([]);
+
+    const db = SQLite.openDatabaseSync("cousin.db");
+
+    useEffect(() => {
+        loadCategoryRecipes();
+    }, [category]);
+
+    const loadCategoryRecipes = async () => {
+        try {
+            const rows = await db.getAllAsync(
+                `SELECT * FROM recipes WHERE LOWER(category) = LOWER(?);`,
+                [category]
+            );
+            setRecipes(rows);
+        } catch (error) {
+            console.error("Failed to load category recipes:", error);
+        }
+    };
+
+    const formatTitle = (cat) => {
+        if (!cat) return 'Recipes 🍽️';
+        return cat.charAt(0).toUpperCase() + cat.slice(1);
+    };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.headerTitle}>Delicious Recipes 🍳</Text>
+            <Text style={styles.headerTitle}>{formatTitle(category)}</Text>
 
             <FlatList
-                data={data}
-                keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
+                data={recipes}
+                keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No recipes in this category yet.</Text>
+                    </View>
+                }
                 renderItem={({ item }) => (
                     <View style={styles.card}>
                         <Image
@@ -74,23 +99,26 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 30,
     },
+    emptyContainer: {
+        paddingTop: 50,
+        alignItems: "center",
+    },
+    emptyText: {
+        fontSize: 16,
+        color: "#6B6B6B",
+    },
     card: {
         backgroundColor: "#FFFFFF",
         borderRadius: 20,
         marginBottom: 20,
-        alignItems: "center",
-        textAlign: "center",
         borderWidth: 1,
         borderColor: "#E5E1DA",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
         elevation: 3,
+        overflow: "hidden",
     },
     cardImage: {
         width: "100%",
-        height: 230,
+        height: 180,
         backgroundColor: "#E5E1DA",
     },
     cardContent: {
@@ -102,21 +130,21 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#1B4332",
         marginBottom: 6,
+        textAlign: "center",
     },
     cardIngredients: {
         fontSize: 14,
         color: "#6B6B6B",
         marginBottom: 20,
+        textAlign: "center",
     },
     button: {
         backgroundColor: "#1B4332",
-        paddingVertical: 15,
+        paddingVertical: 14,
         borderRadius: 40,
         alignItems: "center",
         justifyContent: "center",
-        alignSelf: "center",
-        width: 300,
-        overflow: "hidden",
+        width: "100%",
     },
     buttonText: {
         color: "#FFFFFF",
