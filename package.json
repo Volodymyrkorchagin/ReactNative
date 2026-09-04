@@ -11,6 +11,7 @@
   "dependencies": {
     "expo": "^57.0.19",
     "expo-constants": "~57.0.17",
+    "expo-image-picker": "~57.0.16",
     "expo-linking": "~57.0.9",
     "expo-router": "~57.0.18",
     "expo-sqlite": "~57.0.2",

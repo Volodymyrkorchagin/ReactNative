@@ -1,7 +1,8 @@
 import {
     View,
     Text,
-    StyleSheet, Button,
+    StyleSheet,
+    Image
 } from 'react-native';
 import { Link } from "expo-router";
 import * as SQLite from "expo-sqlite";
@@ -9,7 +10,6 @@ import { useState, useEffect } from "react";
 import data from "./helper/data";
 
 export default function Home() {
-    const [count, setCount] = useState(0);
     const [recipes, setRecipes] = useState([]);
 
     const db = SQLite.openDatabaseSync("cousin.db");
@@ -27,11 +27,6 @@ export default function Home() {
     `)
             .then(() => seedDatabase())
             .then(() => loadRecipes())
-            .then((rows) => {
-                if (rows) {
-                    setCount(rows.length);
-                }
-            })
             .catch((err) => {
                 console.error("Database error:", err);
             });
@@ -67,39 +62,44 @@ export default function Home() {
     const loadRecipes = async () => {
         const rows = await db.getAllAsync(`SELECT * FROM recipes`);
         setRecipes(rows);
-        return rows;
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>
-                Recipe App
-            </Text>
+            <View style={styles.content}>
+                <Text style={styles.title}>
+                    Recipe App
+                </Text>
 
-            <Text style={styles.subtitle}>
-                Discover delicious recipes
-            </Text>
+                <Text style={styles.subtitle}>
+                    Discover delicious recipes
+                </Text>
 
-            <View style={styles.buttons}>
-                <Link href="/popularRecipes" style={styles.button}>
-                    Popular Recipes 🥇
-                </Link>
+                <View style={styles.buttons}>
+                    <Link href="/popularRecipes" style={styles.button}>
+                        Popular Recipes 🥇
+                    </Link>
 
-                <Link href="/category" style={styles.button}>
-                    Categories 📜
-                </Link>
+                    <Link href="/category" style={styles.button}>
+                        Categories 📜
+                    </Link>
 
-                <Link href="/search" style={styles.button}>
-                    Search Recipes 🔍
-                </Link>
+                    <Link href="/search" style={styles.button}>
+                        Search Recipes 🔍
+                    </Link>
 
-                <Link href="/favorites" style={styles.button}>
-                    Favorites ❤️
-                </Link>
+                    <Link href="/myRecipe" style={styles.button}>
+                        My Recipes ✒️
+                    </Link>
+                </View>
+            </View>
 
-                <Link href="/myRecipe" style={styles.button}>
-                    My Recipes ✒️
-                </Link>
+            <View style={styles.footerContainer}>
+                <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=800&q=80' }}
+                    style={styles.footerImage}
+                    resizeMode="cover"
+                />
             </View>
         </View>
     );
@@ -109,6 +109,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F8F5F0",
+        justifyContent: "space-between",
+    },
+    content: {
         paddingHorizontal: 25,
         paddingTop: 80,
     },
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 18,
         color: "#6B6B6B",
-        marginBottom: 45,
+        marginBottom: 30,
     },
     buttons: {
         gap: 15,
@@ -139,5 +142,16 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         borderWidth: 1,
         borderColor: "#E5E1DA",
+    },
+    footerContainer: {
+        width: '100%',
+        height: 200,
+        borderWidth: 1,
+        borderRadius: 5,
+        bottom: 5
+    },
+    footerImage: {
+        width: "100%",
+        height: "100%",
     },
 });

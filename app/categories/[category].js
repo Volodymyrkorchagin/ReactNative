@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SQLite from 'expo-sqlite';
 import { useState, useEffect } from 'react';
+import initialRecipes from '../helper/data';
 
 export default function DynamicCategoryScreen() {
     const router = useRouter();
@@ -16,11 +17,24 @@ export default function DynamicCategoryScreen() {
 
     const loadCategoryRecipes = async () => {
         try {
-            const rows = await db.getAllAsync(
+            const dbRows = await db.getAllAsync(
                 `SELECT * FROM recipes WHERE LOWER(category) = LOWER(?);`,
                 [category]
             );
-            setRecipes(rows);
+
+            const userRecipes = dbRows.map(item => ({
+                ...item,
+                uniqueKey: `db_${item.id}`
+            }));
+
+            const staticRecipes = (initialRecipes || [])
+                .filter(item => item.category && item.category.toLowerCase() === String(category).toLowerCase())
+                .map((item, index) => ({
+                    ...item,
+                    uniqueKey: `static_${item.id || index}`
+                }));
+
+            setRecipes([...userRecipes, ...staticRecipes]);
         } catch (error) {
             console.error("Failed to load category recipes:", error);
         }
@@ -28,7 +42,7 @@ export default function DynamicCategoryScreen() {
 
     const formatTitle = (cat) => {
         if (!cat) return 'Recipes 🍽️';
-        return cat.charAt(0).toUpperCase() + cat.slice(1);
+        return String(cat).charAt(0).toUpperCase() + String(cat).slice(1);
     };
 
     return (
@@ -37,7 +51,7 @@ export default function DynamicCategoryScreen() {
 
             <FlatList
                 data={recipes}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.uniqueKey}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={

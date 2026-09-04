@@ -77,23 +77,6 @@ export default function Layout() {
             />
 
             <Stack.Screen
-                name="favorites"
-                options={{
-                    title: "Favorites",
-                    headerStyle: {
-                        backgroundColor: "#1B4332",
-                    },
-                    headerTintColor: "#FFFFFF",
-                    headerTitleStyle: {
-                        fontWeight: "700",
-                    },
-                    contentStyle: {
-                        backgroundColor: "#F8F5F0",
-                    },
-                }}
-            />
-
-            <Stack.Screen
                 name="myRecipe"
                 options={{
                     title: "My Recipes",
