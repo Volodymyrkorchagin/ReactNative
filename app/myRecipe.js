@@ -17,7 +17,7 @@ import popularRecipes from './helper/data';
 const CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Drinks'];
 
 export default function Home() {
-    const [userRecipes, setUserRecipes] = useState([]);
+    const [recipes, setRecipes] = useState([]);
     const [title, setTitle] = useState("");
     const [category, setCategory] = useState("");
     const [ingredients, setIngredients] = useState("");
@@ -36,15 +36,17 @@ export default function Home() {
             category TEXT,
             ingredients TEXT,
             instructions TEXT,
-            image TEXT
+            image TEXT,
+            is_user INTEGER DEFAULT 1
             );
         `);
+
         await fetchRecipes();
     };
 
     const fetchRecipes = async () => {
         const dbRows = await db.getAllAsync('SELECT * FROM recipes ORDER BY id DESC');
-        setUserRecipes(dbRows);
+        setRecipes(dbRows);
     };
 
     useEffect(() => {
@@ -55,7 +57,7 @@ export default function Home() {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (!permission.granted) {
-            Alert.alert('NO PHOTOS FOR YOU!');
+            Alert.alert('Permission denied', 'No photos access granted.');
             return;
         }
 
@@ -87,7 +89,7 @@ export default function Home() {
         }
 
         await db.runAsync(
-            `INSERT INTO recipes (title, category, ingredients, instructions, image) VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO recipes (title, category, ingredients, instructions, image, is_user) VALUES (?, ?, ?, ?, ?, 1)`,
             [title, category, ingredients, instructions, image]
         );
 
@@ -107,7 +109,8 @@ export default function Home() {
         await fetchRecipes();
     };
 
-    const deleteRecipe = async (id) => {
+    const deleteRecipe = async (id, isUser) => {
+        if (isUser !== 1) return;
         await db.runAsync(`DELETE FROM recipes WHERE id = ?`, [id]);
         await fetchRecipes();
     };
@@ -121,7 +124,7 @@ export default function Home() {
         setImage(item.image || '');
     };
 
-    const renderUserRecipeItem = ({ item }) => (
+    const renderRecipeItem = ({ item }) => (
         <View style={styles.card}>
             {item.image ? (
                 <Image source={{ uri: item.image }} style={styles.cardImage} />
@@ -132,38 +135,26 @@ export default function Home() {
                 <Text style={styles.cardText}>Ingredients: {item.ingredients}</Text>
                 <Text style={styles.cardText}>Instructions: {item.instructions}</Text>
 
-                <View style={styles.cardActions}>
-                    <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => startEditing(item)}
-                    >
-                        <Text style={styles.editButtonText}>EDIT</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => deleteRecipe(item.id)}
-                    >
-                        <Text style={styles.deleteButtonText}>DELETE</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </View>
-    );
-
-    const renderStaticRecipeItem = ({ item }) => (
-        <View style={styles.card}>
-            {item.image ? (
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-            ) : null}
-            <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardCategory}>{item.category}</Text>
-                <Text style={styles.cardText}>Ingredients: {item.ingredients}</Text>
-                <Text style={styles.cardText}>Instructions: {item.instructions}</Text>
-
-                <View style={styles.staticBadge}>
-                    <Text style={styles.staticBadgeText}>It is not your recipe</Text>
-                </View>
+                {item.is_user === 1 ? (
+                    <View style={styles.cardActions}>
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => startEditing(item)}
+                        >
+                            <Text style={styles.editButtonText}>EDIT</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => deleteRecipe(item.id, item.is_user)}
+                        >
+                            <Text style={styles.deleteButtonText}>DELETE</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={styles.staticBadge}>
+                        <Text style={styles.staticBadgeText}>Built-in recipe</Text>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -172,11 +163,12 @@ export default function Home() {
         <ScrollView style={styles.container}>
             <View style={styles.form}>
                 <Text style={styles.formTitle}>
-                    {editingId ? "Edit Recipe" : "Add your delicious recipe"}
+                    {editingId ? "Edit Recipe" : "Add your recipe"}
                 </Text>
 
                 <TextInput
                     placeholder='Title...'
+                    placeholderTextColor="#6B6B6B"
                     value={title}
                     onChangeText={setTitle}
                     style={styles.input}
@@ -213,6 +205,7 @@ export default function Home() {
 
                 <TextInput
                     placeholder='Ingredients...'
+                    placeholderTextColor="#6B6B6B"
                     value={ingredients}
                     onChangeText={setIngredients}
                     style={[styles.input, styles.multilineInput]}
@@ -221,6 +214,7 @@ export default function Home() {
 
                 <TextInput
                     placeholder='Instructions...'
+                    placeholderTextColor="#6B6B6B"
                     value={instructions}
                     onChangeText={setInstructions}
                     style={[styles.input, styles.multilineInput]}
@@ -254,21 +248,11 @@ export default function Home() {
             </View>
 
             <View style={styles.listContainer}>
-                <Text style={styles.listTitle}>Your Recipes</Text>
+                <Text style={styles.listTitle}>All Recipes</Text>
                 <FlatList
-                    data={userRecipes}
-                    keyExtractor={(item) => `db_${item.id}`}
-                    renderItem={renderUserRecipeItem}
-                    scrollEnabled={false}
-                />
-            </View>
-
-            <View style={styles.listContainer}>
-                <Text style={styles.listTitle}>Popular Recipes</Text>
-                <FlatList
-                    data={popularRecipes || []}
-                    keyExtractor={(item, index) => `static_${item.id || index}`}
-                    renderItem={renderStaticRecipeItem}
+                    data={recipes}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderRecipeItem}
                     scrollEnabled={false}
                 />
             </View>
@@ -309,7 +293,6 @@ const styles = StyleSheet.create({
     },
     dropdownContainer: {
         position: 'relative',
-        zIndex: 10,
         elevation: 5,
     },
     selectButton: {
@@ -395,6 +378,7 @@ const styles = StyleSheet.create({
     listContainer: {
         paddingHorizontal: 25,
         paddingTop: 15,
+        paddingBottom: 30,
     },
     listTitle: {
         fontSize: 22,

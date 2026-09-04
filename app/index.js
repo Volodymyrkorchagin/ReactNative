@@ -15,22 +15,35 @@ export default function Home() {
     const db = SQLite.openDatabaseSync("cousin.db");
 
     useEffect(() => {
-        db.execAsync(`
-        CREATE TABLE IF NOT EXISTS recipes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            category TEXT,
-            ingredients TEXT NOT NULL,
-            instructions TEXT,
-            image TEXT NOT NULL
-        );
-    `)
-            .then(() => seedDatabase())
-            .then(() => loadRecipes())
-            .catch((err) => {
-                console.error("Database error:", err);
-            });
+        // Вызываем сброс базы один раз при запускe
+        resetDatabase();
     }, []);
+
+    const resetDatabase = async () => {
+        try {
+            // 1. Удаляем старую таблицу
+            await db.execAsync(`DROP TABLE IF EXISTS recipes;`);
+
+            // 2. Создаем заново с нужным полем is_user
+            await db.execAsync(`
+                CREATE TABLE recipes (
+                                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                         title TEXT NOT NULL,
+                                         category TEXT,
+                                         ingredients TEXT NOT NULL,
+                                         instructions TEXT,
+                                         image TEXT NOT NULL,
+                                         is_user INTEGER DEFAULT 0
+                );
+            `);
+
+            // 3. Заполняем встроенными рецептами и загружаем в состояние
+            await seedDatabase();
+            await loadRecipes();
+        } catch (error) {
+            console.error("Failed to reset database:", error);
+        }
+    };
 
     const seedDatabase = async () => {
         try {
@@ -43,7 +56,7 @@ export default function Home() {
                         : recipe.ingredients;
 
                     await db.runAsync(
-                        `INSERT INTO recipes (title, category, ingredients, instructions, image) VALUES (?, ?, ?, ?, ?);`,
+                        `INSERT INTO recipes (title, category, ingredients, instructions, image, is_user) VALUES (?, ?, ?, ?, ?, 0);`,
                         [
                             recipe.title,
                             recipe.category || 'lunch',

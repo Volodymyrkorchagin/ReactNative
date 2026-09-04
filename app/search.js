@@ -2,83 +2,60 @@ import { View, Text, StyleSheet, FlatList, TextInput, Image, TouchableOpacity } 
 import { useRouter } from 'expo-router';
 import * as SQLite from 'expo-sqlite';
 import { useState, useEffect } from 'react';
-import initialRecipes from './helper/data'; // Проверьте правильность пути к data.js
 
 export default function SearchScreen() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
-    const [allRecipes, setAllRecipes] = useState([]);
-    const [filteredRecipes, setFilteredRecipes] = useState([]);
+    const [recipes, setRecipes] = useState([]);
 
     const db = SQLite.openDatabaseSync("cousin.db");
 
     useEffect(() => {
-        loadAllRecipes();
-    }, []);
+        searchRecipes(searchQuery);
+    }, [searchQuery]);
 
-    useEffect(() => {
-        applyFilters();
-    }, [searchQuery, selectedCategory, allRecipes]);
+    const searchRecipes = async (text) => {
+        if (!text.trim()) {
+            setRecipes([]);
+            return;
+        }
 
-    const loadAllRecipes = async () => {
         try {
-            const dbRows = await db.getAllAsync('SELECT * FROM recipes ORDER BY id DESC');
-            const userList = dbRows.map(item => ({
-                ...item,
-                uniqueKey: `db_${item.id}`,
-                isUserRecipe: true
-            }));
-
-            const staticList = (initialRecipes || []).map((item, index) => ({
-                ...item,
-                uniqueKey: `static_${item.id || index}`,
-                isUserRecipe: false
-            }));
-
-            setAllRecipes([...userList, ...staticList]);
-        } catch (error) {
-            console.error("Error loading recipes:", error);
-        }
-    };
-
-    const applyFilters = () => {
-        let result = allRecipes;
-
-        if (selectedCategory && selectedCategory !== 'All') {
-            result = result.filter(item =>
-                item.category && item.category.toLowerCase() === selectedCategory.toLowerCase()
+            const query = `%${text.toLowerCase().trim()}%`;
+            const rows = await db.getAllAsync(
+                `SELECT * FROM recipes 
+                 WHERE LOWER(title) LIKE ? 
+                    OR LOWER(ingredients) LIKE ? 
+                    OR LOWER(category) LIKE ? 
+                 ORDER BY id DESC;`,
+                [query, query, query]
             );
+            setRecipes(rows);
+        } catch (error) {
+            console.error("Search error:", error);
         }
-
-        if (searchQuery.trim() !== '') {
-            const query = searchQuery.toLowerCase().trim();
-            result = result.filter(item => {
-                const titleMatch = item.title && item.title.toLowerCase().includes(query);
-                const ingredientsMatch = item.ingredients && item.ingredients.toLowerCase().includes(query);
-                return titleMatch || ingredientsMatch;
-            });
-        }
-
-        setFilteredRecipes(result);
     };
 
     return (
         <View style={styles.container}>
             <TextInput
                 style={styles.searchInput}
-                placeholder="Search by title or ingredient..."
+                placeholder="Search by title, ingredient or category..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
             />
 
             <FlatList
-                data={filteredRecipes}
-                keyExtractor={(item) => item.uniqueKey}
+                data={recipes}
+                keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No recipes found.</Text>
+                        <Text style={styles.emptyText}>
+                            {searchQuery.trim() === ''
+                                ? 'Type something to search recipes...'
+                                : 'No recipes found.'}
+                        </Text>
                     </View>
                 }
                 renderItem={({ item }) => (
@@ -88,13 +65,16 @@ export default function SearchScreen() {
                         ) : null}
                         <View style={styles.cardContent}>
                             <Text style={styles.cardTitle}>{item.title}</Text>
-                            <Text style={styles.cardCategory}>{item.category}</Text>
+                            <Text style={styles.cardCategory}>
+                                {item.category ? item.category.toUpperCase() : ''}
+                            </Text>
                             <Text style={styles.cardText} numberOfLines={2}>
                                 🥑 {item.ingredients}
                             </Text>
 
                             <TouchableOpacity
                                 style={styles.button}
+                                activeOpacity={0.7}
                                 onPress={() => {
                                     router.push({
                                         pathname: "/recipes/[id]",
@@ -103,7 +83,8 @@ export default function SearchScreen() {
                                             title: item.title,
                                             ingredients: item.ingredients,
                                             instructions: item.instructions,
-                                            image: item.image
+                                            image: item.image,
+                                            is_user: item.is_user
                                         }
                                     });
                                 }}
@@ -169,9 +150,9 @@ const styles = StyleSheet.create({
         color: "#1B4332",
     },
     cardCategory: {
-        fontSize: 14,
+        fontSize: 13,
         color: "#2D6A4F",
-        fontWeight: "600",
+        fontWeight: "700",
     },
     cardText: {
         fontSize: 14,

@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SQLite from 'expo-sqlite';
 import { useState, useEffect } from 'react';
-import initialRecipes from '../helper/data';
 
 export default function DynamicCategoryScreen() {
     const router = useRouter();
@@ -17,24 +16,11 @@ export default function DynamicCategoryScreen() {
 
     const loadCategoryRecipes = async () => {
         try {
-            const dbRows = await db.getAllAsync(
+            const rows = await db.getAllAsync(
                 `SELECT * FROM recipes WHERE LOWER(category) = LOWER(?);`,
                 [category]
             );
-
-            const userRecipes = dbRows.map(item => ({
-                ...item,
-                uniqueKey: `db_${item.id}`
-            }));
-
-            const staticRecipes = (initialRecipes || [])
-                .filter(item => item.category && item.category.toLowerCase() === String(category).toLowerCase())
-                .map((item, index) => ({
-                    ...item,
-                    uniqueKey: `static_${item.id || index}`
-                }));
-
-            setRecipes([...userRecipes, ...staticRecipes]);
+            setRecipes(rows);
         } catch (error) {
             console.error("Failed to load category recipes:", error);
         }
@@ -51,7 +37,7 @@ export default function DynamicCategoryScreen() {
 
             <FlatList
                 data={recipes}
-                keyExtractor={(item) => item.uniqueKey}
+                keyExtractor={(item) => item.id.toString()}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
@@ -61,10 +47,12 @@ export default function DynamicCategoryScreen() {
                 }
                 renderItem={({ item }) => (
                     <View style={styles.card}>
-                        <Image
-                            source={{ uri: item.image }}
-                            style={styles.cardImage}
-                        />
+                        {item.image ? (
+                            <Image
+                                source={{ uri: item.image }}
+                                style={styles.cardImage}
+                            />
+                        ) : null}
                         <View style={styles.cardContent}>
                             <Text style={styles.cardTitle}>{item.title}</Text>
                             <Text style={styles.cardIngredients} numberOfLines={2}>
@@ -82,7 +70,8 @@ export default function DynamicCategoryScreen() {
                                             title: item.title,
                                             ingredients: item.ingredients,
                                             instructions: item.instructions,
-                                            image: item.image
+                                            image: item.image,
+                                            is_user: item.is_user
                                         }
                                     });
                                 }}
